@@ -219,7 +219,7 @@ Answer: H2O | h2o
 </details>
 </section>
 
-<footer>Made by an LMS specialist who got tired of watching teachers retype quizzes. Free to use and share.</footer>
+<footer>Made by an LMS specialist who got tired of watching teachers retype quizzes. Free to use and share.<br><a id="fb" href="#" target="_blank" rel="noopener" hidden>Send feedback or ask for a tool you need</a></footer>
 </div>
 <script>
 "use strict";
@@ -473,6 +473,8 @@ function zip(files) {
    Only a fixed page name or event name is sent. Question text never is. Leave GC empty to turn counting off. */
 const GC = "";            // your GoatCounter code, e.g. "samruddhi"
 const GITHUB = "";        // your repo link, e.g. "https://github.com/you/quiz-converter"
+const FEEDBACK = "";      // your Google Form link
+if (FEEDBACK) { $("fb").href = FEEDBACK; $("fb").hidden = false; }
 function count(path, event) {
   if (!GC || navigator.doNotTrack === "1") return;
   new Image().src = `https://${GC}.goatcounter.com/count?p=${encodeURIComponent(path)}${event ? "&e=true" : ""}&rnd=${Math.random().toString(36).slice(2)}`;
