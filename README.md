@@ -9,7 +9,7 @@ Teachers often write quizzes in Word or Excel, then retype every question into C
 
 ## Private by design
 - Runs entirely in your browser. Your questions are **never uploaded** anywhere.
-- No sign-up, no cookies, no analytics.
+- No sign-up, no cookies. The only thing counted is an anonymous page visit (via GoatCounter, if switched on); question text is never sent.
 - The page's Content Security Policy (`connect-src 'none'`) blocks it from making any network request, so it *can't* send your data, even by accident.
 - One HTML file with no outside libraries. You can read all the code, or save the page and use it offline.
 
