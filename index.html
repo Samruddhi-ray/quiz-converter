@@ -205,6 +205,8 @@ Answer: H2O | h2o
 <tr><td>No options and no answer</td><td>Essay</td></tr>
 <tr><td><code>[2 pts]</code> at the end of the question</td><td>Points (default 1)</td></tr>
 <tr><td><code>Answer: B</code> under the options</td><td>Marks B as correct</td></tr>
+<tr><td>An <code>Answer key</code> heading at the end, then <code>1. B</code>, <code>2. A, C</code>, <code>3. True</code></td><td>Marks the right answers for each question</td></tr>
+<tr><td>Questions without numbers, separated by a blank line</td><td>Works too</td></tr>
 </table>
 <p><strong>Excel or CSV:</strong> download the template. Columns: Type (MC, MA, TF, SA, Essay), Question, Points, Correct (<code>B</code>, <code>A,C</code>, <code>True</code> or <code>Paris|paris</code>), then Option A to Option F.</p>
 </details>
@@ -215,7 +217,7 @@ Answer: H2O | h2o
 <p>Yes. During import, tick <strong>Import existing quizzes as New Quizzes</strong> if your course shows that option. Otherwise the quiz arrives as a Classic Quiz.</p>
 </details>
 <details><summary>What can't it do yet?</summary>
-<ul><li>Images, equations and tables inside questions: add them in Canvas after importing.</li><li>Old <code>.doc</code> and <code>.xls</code> files: save them as <code>.docx</code> or <code>.xlsx</code> first.</li><li>Answer keys listed separately at the end of a document: put <code>Answer: B</code> under each question instead.</li></ul>
+<ul><li>Images, equations and tables inside questions: add them in Canvas after importing.</li><li>Old <code>.doc</code> and <code>.xls</code> files: save them as <code>.docx</code> or <code>.xlsx</code> first.</li></ul>
 </details>
 </section>
 
@@ -233,10 +235,24 @@ const RE_OPT = /^\s*(\*)?\s*(?:\(?([a-z])\s*[.)]|[-•–])\s+(.*?)\s*(\*)?\s*$/
 const RE_ANS = /^\s*(?:answer|ans|correct)\s*[:=]\s*(.+)$/i;
 const RE_PTS = /\s*[\[(]\s*(\d+(?:\.\d+)?)\s*(?:pts?|points?|marks?)\s*[\])]\s*$/i;
 
+const RE_KEY_HEAD = /^\s*(?:answer\s*key|answers|key)\s*:?\s*$/i;
+const RE_KEY_ITEM = /(\d+)\s*[.):\-–]?\s*([a-z](?:\s*[,&]\s*[a-z])*|true|false)\b/gi;
+
 function parseText(text) {
+  let lines = text.replace(/\r/g, "").split("\n");
+  // An "Answer key" section at the end: lines like "1. B", "2) A, C", "3 - True"
+  let key = null;
+  const k = lines.findIndex(l => RE_KEY_HEAD.test(l));
+  if (k >= 0) {
+    key = {};
+    for (const m of lines.slice(k + 1).join("\n").matchAll(RE_KEY_ITEM)) key[+m[1]] = m[2];
+    lines = lines.slice(0, k);
+  }
+  // If no question is numbered, a blank line starts a new question
+  const numbered = lines.some(l => RE_Q.test(l));
   const out = []; let q = null, blank = false;
   const finish = () => { if (q) out.push(q); q = null; };
-  for (const raw of text.replace(/\r/g, "").split("\n")) {
+  for (const raw of lines) {
     const line = raw.trim();
     if (!line) { blank = true; continue; }
     const mQ = line.match(RE_Q), mO = q && line.match(RE_OPT), mA = q && line.match(RE_ANS);
@@ -246,7 +262,7 @@ function parseText(text) {
       q.options.push({text: mO[3], correct: !!(mO[1] || mO[4]), letter: mO[2] ? mO[2].toUpperCase() : null});
     } else if (mA) {
       q.answers.push(...mA[1].split("|").map(s => s.trim()).filter(Boolean));
-    } else if (!q || (blank && (q.options.length || q.answers.length))) {
+    } else if (!q || (blank && (!numbered || q.options.length || q.answers.length))) {
       finish(); q = newQ(line);
     } else {
       q.stem += (q.stem ? "\n" : "") + line;
@@ -254,6 +270,12 @@ function parseText(text) {
     blank = false;
   }
   finish();
+  if (key) out.forEach((q, i) => {
+    const v = key[i + 1];
+    if (!v || !q.options.length) return;
+    if (/^(true|false)$/i.test(v)) q.options.forEach(o => { o.correct = o.text.toLowerCase() === v.toLowerCase(); });
+    else q.answers = [v];
+  });
   return out.map(finalize);
 }
 function newQ(stem) { return {stem: stem || "", options: [], answers: [], points: null, type: null}; }
