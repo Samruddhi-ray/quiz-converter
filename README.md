@@ -2,7 +2,7 @@
 
 Turn a question list from Word, Excel, CSV or plain text into a **QTI .zip** file that Canvas LMS imports as a ready-made quiz.
 
-**Use it:** _link goes here after GitHub Pages is on_
+**Use it:** https://samruddhi-ray.github.io/quiz-converter/
 
 ## Why
 Teachers often write quizzes in Word or Excel, then retype every question into Canvas one by one. This tool does the conversion in seconds.
