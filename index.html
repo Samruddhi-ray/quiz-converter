@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Privacy lock: this page cannot send data anywhere. connect-src 'none' blocks every network request from scripts. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Quiz Converter for Canvas</title>
+<meta name="description" content="Turn a Word, Excel or plain-text question list into a quiz file Canvas can import. Free, and nothing leaves your computer.">
+<style>
+:root{--bg:#f6f8f7;--card:#ffffff;--ink:#17302f;--muted:#55706d;--line:#d8e3e1;--brand:#0f3d3e;--accent:#f2c14e;--ok:#1f7a4d;--okbg:#e6f4ec;--bad:#b3261e;--badbg:#fdecea;--chip:#e8f0ef}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1716;--card:#152322;--ink:#e6efee;--muted:#9db5b2;--line:#2a3d3b;--brand:#9fd8cf;--accent:#f2c14e;--ok:#7fd3a3;--okbg:#16301f;--bad:#ff9a92;--badbg:#3a1a18;--chip:#1e3230}}
+:root[data-theme="dark"]{--bg:#0e1716;--card:#152322;--ink:#e6efee;--muted:#9db5b2;--line:#2a3d3b;--brand:#9fd8cf;--accent:#f2c14e;--ok:#7fd3a3;--okbg:#16301f;--bad:#ff9a92;--badbg:#3a1a18;--chip:#1e3230}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:900px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:clamp(26px,5vw,36px);margin:8px 0 4px;color:var(--brand);line-height:1.2}
+h2{font-size:20px;margin:0 0 12px}
+.lead{color:var(--muted);margin:0 0 16px;font-size:17px}
+.trust{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px;padding:0;list-style:none}
+.trust li{background:var(--okbg);color:var(--ok);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:0 0 16px}
+.step{display:inline-block;background:var(--accent);color:#1d2b2b;font-weight:700;border-radius:999px;width:28px;height:28px;text-align:center;line-height:28px;margin-right:8px}
+label{font-weight:600;display:block;margin:0 0 6px}
+input[type=text],textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{min-height:240px;font-family:ui-monospace,Consolas,monospace;font-size:14px}
+input:focus,textarea:focus,button:focus-visible,.drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:8px;margin:0 0 12px}
+.tabs button,.btn{font:inherit;font-weight:600;border-radius:8px;padding:9px 16px;cursor:pointer;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
+.tabs button[aria-selected=true]{background:var(--brand);color:var(--card);border-color:var(--brand)}
+.btn.primary{background:var(--brand);color:var(--card);border-color:var(--brand);font-size:17px;padding:12px 22px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:32px 16px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--brand);background:var(--chip)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px}
+table.fmt{border-collapse:collapse;width:100%;font-size:14px}
+table.fmt td,table.fmt th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.summary{font-weight:600;margin:0 0 12px}
+ol.preview{padding-left:20px;margin:0}
+ol.preview>li{margin:0 0 14px}
+.chip{display:inline-block;font-size:12px;font-weight:700;background:var(--chip);border-radius:6px;padding:1px 8px;margin-right:6px;vertical-align:middle}
+.pts{color:var(--muted);font-size:13px}
+.opts{margin:4px 0 0;padding-left:18px;list-style:none}
+.opts li{margin:0}
+.opts li.correct{color:var(--ok);font-weight:600}
+.opts li.correct::before{content:"✓ ";}
+.err{background:var(--badbg);color:var(--bad);border-radius:6px;padding:4px 10px;margin-top:6px;font-size:14px}
+.note{color:var(--muted);font-size:14px}
+footer{color:var(--muted);font-size:14px;text-align:center;margin-top:32px}
+.sr{position:absolute;left:-9999px}
+@media (max-width:560px){.card{padding:16px}textarea{min-height:200px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Quiz Converter for Canvas</h1>
+<p class="lead">Turn your question list (Word, Excel, CSV or plain text) into a file Canvas imports as a ready-made quiz. No more typing questions in one by one.</p>
+<ul class="trust" aria-label="Privacy">
+<li>Runs only in your browser</li><li>Nothing is uploaded</li><li>No sign-up, no tracking</li><li>Free and open source</li>
+</ul>
+
+<section class="card" aria-labelledby="s1">
+<h2 id="s1"><span class="step">1</span>Name your quiz</h2>
+<label for="title">Quiz title</label>
+<input type="text" id="title" value="My quiz" maxlength="200">
+</section>
+
+<section class="card" aria-labelledby="s2">
+<h2 id="s2"><span class="step">2</span>Add your questions</h2>
+<div class="tabs" role="tablist">
+<button role="tab" id="tab-paste" aria-selected="true" aria-controls="pane-paste">Paste text</button>
+<button role="tab" id="tab-file" aria-selected="false" aria-controls="pane-file">Upload a file</button>
+</div>
+<div id="pane-paste" role="tabpanel" aria-labelledby="tab-paste">
+<label for="src" class="sr">Questions</label>
+<textarea id="src" spellcheck="false" placeholder="1. What is the capital of France?
+a) Berlin
+*b) Paris
+c) Madrid"></textarea>
+<div class="row"><button class="btn" id="example">Fill in an example</button><button class="btn" id="clear">Clear</button></div>
+</div>
+<div id="pane-file" role="tabpanel" aria-labelledby="tab-file" hidden>
+<div class="drop" id="drop">
+<p><strong>Drop a file here</strong> or</p>
+<label class="btn" for="file" style="display:inline-block">Choose a file</label>
+<input type="file" id="file" accept=".docx,.xlsx,.csv,.txt" class="sr">
+<p class="note">Word (.docx), Excel (.xlsx), CSV or .txt. The file is read on your computer and never uploaded.</p>
+<p id="filemsg" role="status"></p>
+</div>
+<div class="row"><button class="btn" id="tpl">Download the Excel/CSV template</button></div>
+</div>
+<details>
+<summary>How to write your questions</summary>
+<p><strong>In text or Word:</strong> number each question, letter the options, and mark the right answer with <code>*</code> (in Word, you can make the right answer <strong>bold</strong> instead).</p>
+<pre>1. Which organ pumps blood? [2 pts]
+a) Lungs
+*b) Heart
+c) Liver
+
+2. Which are prime numbers?
+*a) 2
+*b) 3
+c) 4
+
+3. The Earth orbits the Sun.
+*a) True
+b) False
+
+4. What is the chemical symbol for water?
+Answer: H2O | h2o
+
+5. Explain photosynthesis in your own words.</pre>
+<table class="fmt">
+<tr><th>You write</th><th>You get</th></tr>
+<tr><td>Options with one <code>*</code></td><td>Multiple choice</td></tr>
+<tr><td>Options with two or more <code>*</code></td><td>Multiple answers</td></tr>
+<tr><td>Options True / False</td><td>True/False</td></tr>
+<tr><td><code>Answer: …</code> and no options (separate accepted answers with <code>|</code>)</td><td>Short answer (fill in the blank)</td></tr>
+<tr><td>No options and no answer</td><td>Essay</td></tr>
+<tr><td><code>[2 pts]</code> at the end of the question</td><td>Points (default is 1)</td></tr>
+<tr><td><code>Answer: B</code> under the options</td><td>Marks option B as correct (instead of <code>*</code>)</td></tr>
+</table>
+<p><strong>In Excel or CSV:</strong> use the template. Columns: Type (MC, MA, TF, SA, Essay), Question, Points, Correct (for example <code>B</code>, <code>A,C</code>, <code>True</code>, or <code>Paris|paris</code>), then Option A to Option F.</p>
+</details>
+</section>
+
+<section class="card" aria-labelledby="s3">
+<h2 id="s3"><span class="step">3</span>Check and download</h2>
+<p class="summary" id="summary" role="status">Add some questions to see a preview.</p>
+<ol class="preview" id="preview"></ol>
+<div class="row"><button class="btn primary" id="dl" disabled>Download quiz file (.zip)</button></div>
+</section>
+
+<section class="card" aria-labelledby="s4">
+<h2 id="s4"><span class="step">4</span>Import into Canvas</h2>
+<ol>
+<li>In your course, open <strong>Settings</strong>, then <strong>Import Course Content</strong>.</li>
+<li>For Content Type, choose <strong>QTI .zip file</strong>, and choose the file you downloaded.</li>
+<li>If your course uses New Quizzes, tick <strong>Import existing quizzes as New Quizzes</strong> (if you see it).</li>
+<li>Click <strong>Import</strong>. Your quiz appears under Quizzes, unpublished, so you can check it before students see it.</li>
+</ol>
+<p class="note">Always preview the quiz in Canvas before publishing.</p>
+</section>
+
+<footer>Made by an LMS specialist who got tired of typing quizzes by hand. Free to use and share.</footer>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const TYPES = {MC:"Multiple choice", MA:"Multiple answers", TF:"True/False", SA:"Short answer", ESSAY:"Essay"};
+let questions = [];
+
+/* ---------- Parsing: text ---------- */
+const RE_Q = /^\s*(?:q(?:uestion)?\s*)?\d+\s*[.):]\s*(.*)$/i;
+const RE_OPT = /^\s*(\*)?\s*(?:\(?([a-z])\s*[.)]|[-•–])\s+(.*?)\s*(\*)?\s*$/i;
+const RE_ANS = /^\s*(?:answer|ans|correct)\s*[:=]\s*(.+)$/i;
+const RE_PTS = /\s*[\[(]\s*(\d+(?:\.\d+)?)\s*(?:pts?|points?|marks?)\s*[\])]\s*$/i;
+
+function parseText(text) {
+  const out = []; let q = null, blank = false;
+  const finish = () => { if (q) out.push(q); q = null; };
+  for (const raw of text.replace(/\r/g, "").split("\n")) {
+    const line = raw.trim();
+    if (!line) { blank = true; continue; }
+    const mQ = line.match(RE_Q), mO = q && line.match(RE_OPT), mA = q && line.match(RE_ANS);
+    if (mQ) {
+      finish(); q = newQ(mQ[1]);
+    } else if (mO && (mO[2] || q.options.length || q.stem)) {
+      q.options.push({text: mO[3], correct: !!(mO[1] || mO[4]), letter: mO[2] ? mO[2].toUpperCase() : null});
+    } else if (mA) {
+      q.answers.push(...mA[1].split("|").map(s => s.trim()).filter(Boolean));
+    } else if (!q || (blank && (q.options.length || q.answers.length))) {
+      finish(); q = newQ(line);
+    } else {
+      q.stem += (q.stem ? "\n" : "") + line;
+    }
+    blank = false;
+  }
+  finish();
+  return out.map(finalize);
+}
+function newQ(stem) { return {stem: stem || "", options: [], answers: [], points: null, type: null}; }
+
+function finalize(q) {
+  const m = q.stem.match(RE_PTS);
+  if (m) { q.points = parseFloat(m[1]); q.stem = q.stem.replace(RE_PTS, ""); }
+  if (q.points == null) q.points = 1;
+  // "Answer: B" or "Answer: A, C" after lettered options marks them correct
+  if (q.options.length && q.answers.length) {
+    const letters = q.answers.join(",").split(/[,\s]+/).map(s => s.toUpperCase()).filter(Boolean);
+    q.options.forEach((o, i) => { const L = o.letter || String.fromCharCode(65 + i); if (letters.includes(L)) o.correct = true; });
+    q.answers = [];
+  }
+  if (!q.type) {
+    const n = q.options.filter(o => o.correct).length;
+    if (q.options.length === 2 && q.options.every(o => /^(true|false)$/i.test(o.text))) q.type = "TF";
+    else if (q.options.length) q.type = n > 1 ? "MA" : "MC";
+    else q.type = q.answers.length ? "SA" : "ESSAY";
+  }
+  q.errors = validate(q);
+  return q;
+}
+
+function validate(q) {
+  const e = [], n = q.options.filter(o => o.correct).length;
+  if (!q.stem.trim()) e.push("The question text is empty.");
+  if (!(q.points >= 0)) e.push("Points must be a number.");
+  if (q.type === "MC" || q.type === "TF" || q.type === "MA") {
+    if (q.options.length < 2) e.push("Needs at least 2 options.");
+    if (n === 0) e.push("No correct answer marked. Add * before the right option.");
+    if ((q.type === "MC" || q.type === "TF") && n > 1) e.push("Only one option can be correct here.");
+    if (q.options.some(o => !o.text.trim())) e.push("One of the options is empty.");
+  }
+  if (q.type === "SA" && !q.answers.length) e.push("Short answer needs at least one accepted answer.");
+  return e;
+}
+
+/* ---------- Parsing: CSV / Excel rows ---------- */
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", inQ = false;
+  text = text.replace(/^﻿/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else inQ = false; } else f += c; }
+    else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+function rowsToQuestions(rows) {
+  rows = rows.filter(r => r.some(c => String(c).trim()));
+  if (rows.length && /question/i.test(String(rows[0][1] || ""))) rows.shift();
+  return rows.map(r => {
+    const cell = i => String(r[i] ?? "").trim();
+    const t = cell(0).toUpperCase().replace(/[^A-Z]/g, "");
+    const type = {MC:"MC",MULTIPLECHOICE:"MC",MA:"MA",MULTIPLEANSWERS:"MA",MULTIPLEANSWER:"MA",TF:"TF",TRUEFALSE:"TF",SA:"SA",SHORTANSWER:"SA",FIB:"SA",ESSAY:"ESSAY"}[t] || null;
+    const q = newQ(cell(1));
+    q.points = cell(2) === "" ? 1 : parseFloat(cell(2));
+    const correct = cell(3);
+    if (type === "TF") {
+      q.options = [{text:"True", correct:/^t/i.test(correct)}, {text:"False", correct:/^f/i.test(correct)}];
+    } else if (type === "SA") {
+      q.answers = correct.split("|").map(s => s.trim()).filter(Boolean);
+    } else if (type !== "ESSAY") {
+      const letters = correct.toUpperCase().split(/[,\s;]+/).filter(Boolean);
+      for (let i = 4; i < Math.max(r.length, 10); i++) {
+        const txt = cell(i); if (!txt) continue;
+        const L = String.fromCharCode(61 + i); // column 4 -> A
+        q.options.push({text: txt, correct: letters.includes(L), letter: L});
+      }
+    }
+    q.type = type || (cell(0) ? "BAD" : null);
+    const out = finalize(q);
+    if (q.type === "BAD") { out.type = "MC"; out.errors.unshift(`Unknown type "${cell(0)}". Use MC, MA, TF, SA or Essay.`); }
+    return out;
+  });
+}
+
+/* ---------- Reading .docx / .xlsx (they are zip files) ---------- */
+async function unzip(buf) {
+  const u = new Uint8Array(buf), v = new DataView(buf), dec = new TextDecoder();
+  let e = u.length - 22;
+  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("This file doesn't look like a Word or Excel file.");
+  const files = {}; let p = v.getUint32(e + 16, true);
+  for (let i = 0, n = v.getUint16(e + 10, true); i < n; i++) {
+    const nl = v.getUint16(p + 28, true);
+    files[dec.decode(u.subarray(p + 46, p + 46 + nl))] = {method: v.getUint16(p + 10, true), size: v.getUint32(p + 20, true), off: v.getUint32(p + 42, true)};
+    p += 46 + nl + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+  }
+  const read = async name => {
+    const f = files[name]; if (!f) return null;
+    const start = f.off + 30 + v.getUint16(f.off + 26, true) + v.getUint16(f.off + 28, true);
+    const data = u.subarray(start, start + f.size);
+    if (f.method === 0) return dec.decode(data);
+    const s = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return await new Response(s).text();
+  };
+  return {names: Object.keys(files), read};
+}
+const xml = s => new DOMParser().parseFromString(s, "application/xml");
+const tags = (node, name) => Array.from(node.getElementsByTagName(name));
+
+async function docxToText(buf) {
+  const z = await unzip(buf), doc = await z.read("word/document.xml");
+  if (!doc) throw new Error("Couldn't find the document text inside this Word file.");
+  const lines = []; let qn = 0;
+  for (const p of tags(xml(doc), "w:p")) {
+    let text = "", allBold = true, anyText = false;
+    for (const r of tags(p, "w:r")) {
+      const t = tags(r, "w:t").map(x => x.textContent).join("") + (tags(r, "w:tab").length ? " " : "");
+      if (!t.trim()) { text += t; continue; }
+      anyText = true; text += t;
+      const b = tags(r, "w:b")[0];
+      if (!b || /^(0|false)$/i.test(b.getAttribute("w:val") || "")) allBold = false;
+    }
+    text = text.trim();
+    if (!text) { lines.push(""); continue; }
+    const num = tags(p, "w:numPr")[0];
+    if (num) {
+      const lvl = parseInt((tags(num, "w:ilvl")[0] || {getAttribute: () => "0"}).getAttribute("w:val") || "0", 10);
+      if (lvl === 0 && !RE_OPT.test(text)) text = `${++qn}. ${text}`;
+      else if (!RE_OPT.test(text)) text = `- ${text}`;
+    }
+    if (anyText && allBold && RE_OPT.test(text) && !text.startsWith("*")) text = "*" + text;
+    lines.push(text);
+  }
+  return lines.join("\n");
+}
+
+async function xlsxToRows(buf) {
+  const z = await unzip(buf);
+  const sheet = z.names.filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort((a, b) => parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/)))[0];
+  if (!sheet) throw new Error("Couldn't find a worksheet in this Excel file.");
+  const ssXml = await z.read("xl/sharedStrings.xml");
+  const shared = ssXml ? tags(xml(ssXml), "si").map(si => tags(si, "t").map(t => t.textContent).join("")) : [];
+  const rows = [];
+  for (const r of tags(xml(await z.read(sheet)), "row")) {
+    const row = [];
+    for (const c of tags(r, "c")) {
+      const ref = c.getAttribute("r") || "", col = ref.replace(/\d+/g, "").split("").reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+      const t = c.getAttribute("t"), vEl = tags(c, "v")[0];
+      let val = "";
+      if (t === "s") val = shared[parseInt(vEl?.textContent, 10)] ?? "";
+      else if (t === "inlineStr") val = tags(c, "t").map(x => x.textContent).join("");
+      else val = vEl ? vEl.textContent : "";
+      row[col >= 0 ? col : row.length] = val;
+    }
+    rows.push(Array.from(row, x => x ?? ""));
+  }
+  return rows;
+}
+
+/* ---------- Building the QTI file ---------- */
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const html = s => s.split("\n").map(l => `<p>${esc(l)}</p>`).join("");
+const uid = () => "g" + crypto.randomUUID().replace(/-/g, "");
+const meta = (k, v) => `<qtimetadatafield><fieldlabel>${k}</fieldlabel><fieldentry>${v}</fieldentry></qtimetadatafield>`;
+const QTYPE = {MC:"multiple_choice_question", TF:"true_false_question", MA:"multiple_answers_question", SA:"short_answer_question", ESSAY:"essay_question"};
+
+function itemXml(q, i) {
+  const ids = q.options.map(() => uid());
+  let body, proc;
+  if (q.type === "MC" || q.type === "TF" || q.type === "MA") {
+    const labels = q.options.map((o, k) => `<response_label ident="${ids[k]}"><material><mattext texttype="text/plain">${esc(o.text)}</mattext></material></response_label>`).join("");
+    body = `<response_lid ident="response1" rcardinality="${q.type === "MA" ? "Multiple" : "Single"}"><render_choice>${labels}</render_choice></response_lid>`;
+    if (q.type === "MA") {
+      const conds = q.options.map((o, k) => o.correct ? `<varequal respident="response1">${ids[k]}</varequal>` : `<not><varequal respident="response1">${ids[k]}</varequal></not>`).join("");
+      proc = `<respcondition continue="No"><conditionvar><and>${conds}</and></conditionvar><setvar action="Set" varname="SCORE">100</setvar></respcondition>`;
+    } else {
+      const k = q.options.findIndex(o => o.correct);
+      proc = `<respcondition continue="No"><conditionvar><varequal respident="response1">${ids[k]}</varequal></conditionvar><setvar action="Set" varname="SCORE">100</setvar></respcondition>`;
+    }
+  } else if (q.type === "SA") {
+    body = `<response_str ident="response1" rcardinality="Single"><render_fib><response_label ident="answer1" rshuffle="No"/></render_fib></response_str>`;
+    proc = `<respcondition continue="No"><conditionvar>${q.answers.map(a => `<varequal respident="response1">${esc(a)}</varequal>`).join("")}</conditionvar><setvar action="Set" varname="SCORE">100</setvar></respcondition>`;
+  } else {
+    body = `<response_str ident="response1" rcardinality="Single"><render_fib><response_label ident="answer1" rshuffle="No"/></render_fib></response_str>`;
+    proc = `<respcondition continue="No"><conditionvar><other/></conditionvar></respcondition>`;
+  }
+  return `<item ident="${uid()}" title="Question ${i + 1}"><itemmetadata><qtimetadata>${meta("question_type", QTYPE[q.type])}${meta("points_possible", q.points)}${ids.length ? meta("original_answer_ids", ids.join(",")) : ""}</qtimetadata></itemmetadata><presentation><material><mattext texttype="text/html">${esc(html(q.stem))}</mattext></material>${body}</presentation><resprocessing><outcomes><decvar maxvalue="100" minvalue="0" varname="SCORE" vartype="Decimal"/></outcomes>${proc}</resprocessing></item>`;
+}
+
+function buildQti(title, qs) {
+  const aid = uid(), head = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  const assessment = head + `<questestinterop xmlns="http://www.imsglobal.org/xsd/ims_qtiasiv1p2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/ims_qtiasiv1p2 http://www.imsglobal.org/xsd/ims_qtiasiv1p2p1.xsd"><assessment ident="${aid}" title="${esc(title)}"><qtimetadata>${meta("cc_maxattempts", 1)}</qtimetadata><section ident="root_section">${qs.map(itemXml).join("")}</section></assessment></questestinterop>`;
+  const manifest = head + `<manifest identifier="${uid()}" xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1" xmlns:imsmd="http://www.imsglobal.org/xsd/imsmd_v1p2"><metadata><schema>IMS Content</schema><schemaversion>1.1.3</schemaversion><imsmd:lom><imsmd:general><imsmd:title><imsmd:string>${esc(title)}</imsmd:string></imsmd:title></imsmd:general></imsmd:lom></metadata><organizations/><resources><resource identifier="${aid}" type="imsqti_xmlv1p2"><file href="${aid}/${aid}.xml"/></resource></resources></manifest>`;
+  return zip([{name: "imsmanifest.xml", text: manifest}, {name: `${aid}/${aid}.xml`, text: assessment}]);
+}
+
+/* ---------- A tiny zip writer (no compression) ---------- */
+const CRC = Array.from({length: 256}, (_, n) => { for (let k = 0; k < 8; k++) n = n & 1 ? 0xEDB88320 ^ (n >>> 1) : n >>> 1; return n >>> 0; });
+const crc32 = b => { let c = -1; for (const x of b) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; };
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], dir = []; let off = 0;
+  for (const f of files) {
+    const n = enc.encode(f.name), d = enc.encode(f.text), c = crc32(d);
+    const h = new DataView(new ArrayBuffer(30));
+    [[0,0x04034b50,4],[4,20,2],[6,0x0800,2],[8,0,2],[10,0,2],[12,0x21,2],[14,c,4],[18,d.length,4],[22,d.length,4],[26,n.length,2],[28,0,2]].forEach(([o,val,s]) => s === 4 ? h.setUint32(o,val,true) : h.setUint16(o,val,true));
+    const cd = new DataView(new ArrayBuffer(46));
+    [[0,0x02014b50,4],[4,20,2],[6,20,2],[8,0x0800,2],[10,0,2],[12,0,2],[14,0x21,2],[16,c,4],[20,d.length,4],[24,d.length,4],[28,n.length,2],[42,off,4]].forEach(([o,val,s]) => s === 4 ? cd.setUint32(o,val,true) : cd.setUint16(o,val,true));
+    parts.push(new Uint8Array(h.buffer), n, d); dir.push(new Uint8Array(cd.buffer), n);
+    off += 30 + n.length + d.length;
+  }
+  const size = dir.reduce((s, a) => s + a.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, size, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, new Uint8Array(end.buffer)], {type: "application/zip"});
+}
+
+/* ---------- Page ---------- */
+function render() {
+  const list = $("preview"); list.replaceChildren();
+  const bad = questions.filter(q => q.errors.length).length;
+  const pts = questions.reduce((s, q) => s + (q.points || 0), 0);
+  $("summary").textContent = !questions.length ? "Add some questions to see a preview."
+    : `${questions.length} question${questions.length > 1 ? "s" : ""}, ${pts} point${pts === 1 ? "" : "s"}` + (bad ? ` · ${bad} need fixing before you can download` : " · ready to download");
+  for (const q of questions) {
+    const li = document.createElement("li");
+    const chip = Object.assign(document.createElement("span"), {className: "chip", textContent: TYPES[q.type]});
+    const p = Object.assign(document.createElement("span"), {className: "pts", textContent: ` (${q.points} pt${q.points === 1 ? "" : "s"})`});
+    li.append(chip, document.createTextNode(q.stem), p);
+    if (q.options.length) {
+      const ul = Object.assign(document.createElement("ul"), {className: "opts"});
+      q.options.forEach(o => ul.append(Object.assign(document.createElement("li"), {className: o.correct ? "correct" : "", textContent: o.text})));
+      li.append(ul);
+    }
+    if (q.answers.length) li.append(Object.assign(document.createElement("div"), {className: "pts", textContent: "Accepted answers: " + q.answers.join(", ")}));
+    q.errors.forEach(e => li.append(Object.assign(document.createElement("div"), {className: "err", textContent: e})));
+    list.append(li);
+  }
+  $("dl").disabled = !questions.length || bad > 0;
+}
+
+let timer;
+$("src").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => { questions = parseText($("src").value); render(); }, 200); });
+
+async function loadFile(file) {
+  const msg = $("filemsg"); msg.textContent = "Reading…";
+  try {
+    if (file.size > 20 * 1024 * 1024) throw new Error("That file is over 20 MB. Please split it.");
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".docx")) { const t = await docxToText(await file.arrayBuffer()); $("src").value = t; questions = parseText(t); }
+    else if (name.endsWith(".xlsx")) questions = rowsToQuestions(await xlsxToRows(await file.arrayBuffer()));
+    else if (name.endsWith(".csv")) questions = rowsToQuestions(parseCSV(await file.text()));
+    else if (name.endsWith(".txt")) { const t = await file.text(); $("src").value = t; questions = parseText(t); }
+    else throw new Error("Please use a .docx, .xlsx, .csv or .txt file. (Old .doc and .xls files: open them and save as the newer format.)");
+    msg.textContent = `Read "${file.name}": ${questions.length} question${questions.length === 1 ? "" : "s"} found.`;
+    if (!$("title").value.trim() || $("title").value === "My quiz") $("title").value = file.name.replace(/\.[^.]+$/, "");
+  } catch (e) { msg.textContent = e.message; questions = []; }
+  render();
+}
+$("file").addEventListener("change", e => e.target.files[0] && loadFile(e.target.files[0]));
+const drop = $("drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => e.dataTransfer.files[0] && loadFile(e.dataTransfer.files[0]));
+
+function save(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
+$("dl").addEventListener("click", () => {
+  const title = $("title").value.trim() || "Quiz";
+  save(buildQti(title, questions), title.replace(/[^\w -]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) + "-qti.zip");
+});
+$("tpl").addEventListener("click", () => {
+  const csv = "Type,Question,Points,Correct,Option A,Option B,Option C,Option D,Option E,Option F\n" +
+    'MC,Which organ pumps blood?,2,B,Lungs,Heart,Liver,,,\nMA,Which are prime numbers?,1,"A,B",2,3,4,,,\nTF,The Earth orbits the Sun.,1,True,,,,,,\nSA,What is the chemical symbol for water?,1,H2O|h2o,,,,,,\nESSAY,Explain photosynthesis in your own words.,5,,,,,,,\n';
+  save(new Blob(["﻿" + csv], {type: "text/csv"}), "quiz-template.csv");
+});
+$("example").addEventListener("click", () => { $("src").value = document.querySelector("details pre").textContent; $("src").dispatchEvent(new Event("input")); });
+$("clear").addEventListener("click", () => { $("src").value = ""; questions = []; render(); });
+for (const [tab, pane, other, otherPane] of [["tab-paste","pane-paste","tab-file","pane-file"],["tab-file","pane-file","tab-paste","pane-paste"]])
+  $(tab).addEventListener("click", () => { $(tab).setAttribute("aria-selected", "true"); $(other).setAttribute("aria-selected", "false"); $(pane).hidden = false; $(otherPane).hidden = true; });
+</script>
+</body>
+</html>
